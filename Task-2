@@ -1,0 +1,69 @@
+from scapy.all import *
+from scapy.layers.http import HTTP, HTTPRequest, HTTPResponse
+import time
+from datetime import datetime
+
+def packet_callback(packet):
+    # Get timestamp
+    timestamp = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+    
+    # Print basic packet info
+    print(f"\n[{timestamp}] New Packet Captured:")
+    print("="*50)
+    
+    # Layer 2 (Data Link Layer) analysis
+    if packet.haslayer(Ether):
+        print(f"Source MAC: {packet[Ether].src}")
+        print(f"Destination MAC: {packet[Ether].dst}")
+    
+    # Layer 3 (Network Layer) analysis
+    if packet.haslayer(IP):
+        print(f"Source IP: {packet[IP].src}")
+        print(f"Destination IP: {packet[IP].dst}")
+        print(f"Protocol: {packet[IP].proto}")
+    
+    # Layer 4 (Transport Layer) analysis
+    if packet.haslayer(TCP):
+        print(f"Source Port: {packet[TCP].sport}")
+        print(f"Destination Port: {packet[TCP].dport}")
+        print(f"TCP Flags: {packet[TCP].flags}")
+    elif packet.haslayer(UDP):
+        print(f"Source Port: {packet[UDP].sport}")
+        print(f"Destination Port: {packet[UDP].dport}")
+    
+    # Application Layer analysis
+    if packet.haslayer(DNS):
+        print("DNS Query:")
+        print(f"Domain: {packet[DNS].qd.qname.decode() if packet[DNS].qd else 'N/A'}")
+    elif packet.haslayer(HTTPRequest) or packet.haslayer(HTTPResponse):
+        print("HTTP Traffic Detected")
+        if packet.haslayer(HTTPRequest):
+            print(f"HTTP Request: {packet[HTTPRequest].Method.decode() if packet[HTTPRequest].Method else 'N/A'} {packet[HTTPRequest].Path.decode() if packet[HTTPRequest].Path else 'N/A'}")
+        if packet.haslayer(HTTPResponse):
+            print(f"HTTP Response Code: {packet[HTTPResponse].Status_Code.decode() if packet[HTTPResponse].Status_Code else 'N/A'}")
+
+def start_sniffing(interface=None, filter="", packet_count=0):
+    try:
+        print("Starting Network Sniffer...")
+        print(f"Interface: {interface if interface else 'default'}")
+        print(f"Filter: {filter if filter else 'none'}")
+        print("Press Ctrl+C to stop capturing")
+        
+        # Start packet capture
+        sniff(
+            iface=interface,
+            filter=filter,
+            prn=packet_callback,
+            count=packet_count,
+            store=0
+        )
+    except KeyboardInterrupt:
+        print("\nStopping Network Sniffer...")
+    except Exception as e:
+        print(f"Error: {e}")
+
+if __name__ == "__main__":
+    # Example usage
+    # You can specify interface, filter, and packet count
+    # Filter examples: "tcp", "udp", "port 80", "host 192.168.1.1"
+    start_sniffing(filter="tcp")
